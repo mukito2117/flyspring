@@ -1,9 +1,17 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const schedule = require('node-schedule');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import schedule from 'node-schedule';
+import dotenv from 'dotenv';
+import { tracker, logList } from './Utils/UpLogic.js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +23,10 @@ app.use(express.json());
 
 // Serve React build static files
 app.use(express.static(path.join(__dirname, 'front', 'build')));
+
+app.get("/placeorder/details", (req, res) => {
+    res.json(orderMemory);
+});
 
 // API Routes
 app.get('/api/users', (req, res) => {
@@ -41,7 +53,7 @@ app.post('/api/users', (req, res) => {
   });
 });
 
-// API endpoint to get datetime log data
+// API endpoint to get datetime log data from file
 app.get('/api/datetimelog', (req, res) => {
   if (!fs.existsSync(filePath)) {
     return res.json([]);
@@ -63,12 +75,17 @@ app.get('/api/datetimelog', (req, res) => {
   });
 });
 
+// New API endpoint to get in-memory logList data
+app.get('/api/loglist', (req, res) => {
+  res.json(logList);
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Serve React app for root and other non-API routes (client-side routing)
+// Serve React app for root and client-side routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'front', 'build', 'index.html'));
 });
@@ -84,34 +101,8 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Scheduled job to add current datetime to local JSON file every 10 seconds
-const addCurrentDateTimeToFile = () => {
-  const now = new Date();
-  let data = [];
-
-  if (fs.existsSync(filePath)) {
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    if (fileContent) {
-      try {
-        data = JSON.parse(fileContent);
-      } catch (error) {
-        console.error('Error parsing JSON file, resetting data:', error);
-        data = [];
-      }
-    }
-  }
-
-  data.push({ datetime: now.toISOString() });
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    console.log(`Logged datetime: ${now.toISOString()}`);
-  } catch (error) {
-    console.error('Error writing to JSON file:', error);
-  }
-};
-
-// Schedule job every 10 seconds
-schedule.scheduleJob('*/10 * * * * *', addCurrentDateTimeToFile);
+// Schedule tracker job every second
+schedule.scheduleJob('*/1 * * * * *', tracker);
 
 // Start server
 app.listen(PORT, () => {
