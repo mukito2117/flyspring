@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import schedule from 'node-schedule';
 import dotenv from 'dotenv';
-import { tracker, logList,orderMemory } from './Utils/UpLogic.js';
+import { tracker, logList, orderMemory } from './Utils/UpLogic.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 

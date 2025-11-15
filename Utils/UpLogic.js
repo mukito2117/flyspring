@@ -1,4 +1,3 @@
-
 const fs = require("fs");
 const axios = require("axios");
 const { log } = require("console");
@@ -35,11 +34,9 @@ const levels = [
     { threshold: 100, minChange: 5, stoploss: 4, gap: 1 },
     { threshold: 50, minChange: 3, stoploss: 3, gap: 1 },
     { threshold: 25, minChange: 2, stoploss: 2, gap: 1 },
-    { threshold: 10, minChange: 2, stoploss: 2, gap: 1 },
-   // { threshold: 5, minChange: 0.75, stoploss: 0.5, gap: 0.25 }
+    { threshold: 10, minChange: 2, stoploss: 2, gap: 1 }
 ];
 
-// State for orders
 const orderMemory = {
     call: null,
     put: null,
@@ -50,9 +47,6 @@ function saveOrderToDisk() {
     fs.writeFileSync("./orderjson.json", JSON.stringify(orderMemory, null, 4));
 }
 
-
-
-// Actual Upstox order placement
 async function placeOrderToUpstox(token, qty, entryPrice, stoploss, trailingGap) {
     const payload = {
         type: 'MULTIPLE',
@@ -101,7 +95,6 @@ function createOrderData(type, token, entryPrice, stoploss, trailingGap, qty, re
     };
 }
 
-// Option chain and LTP fetchers
 async function getNearestOptionInstrumentKeys() {
     try {
         const response = await axios.get(API_URL, {
@@ -153,26 +146,25 @@ async function getLtp(keys) {
     }
 }
 
-// Trailing and order-exit logic
 async function monitorOrderLtp(type, lastLtp) {
     const order = orderMemory[type];
     if (!order || order.status !== "active") return false;
     order.ltpTrail.push(lastLtp);
 
     // Trailing logic
-     if (type === "call") {
-    let newStop = Math.max(order.stoplossPrice, lastLtp - order.trailingGap);
-    if (newStop > order.stoplossPrice) {
-      order.stoplossPrice = newStop;
-      order.stoplossTrail.push(newStop); // Add updated stoploss to the trail
+    if (type === "call") {
+        let newStop = Math.max(order.stoplossPrice, lastLtp - order.trailingGap);
+        if (newStop > order.stoplossPrice) {
+            order.stoplossPrice = newStop;
+            order.stoplossTrail.push(newStop);
+        }
+    } else if (type === "put") {
+        let newStop = Math.min(order.stoplossPrice, lastLtp + order.trailingGap);
+        if (newStop < order.stoplossPrice) {
+            order.stoplossPrice = newStop;
+            order.stoplossTrail.push(newStop);
+        }
     }
-  } else if (type === "put") {
-    let newStop = Math.min(order.stoplossPrice, lastLtp + order.trailingGap);
-    if (newStop < order.stoplossPrice) {
-      order.stoplossPrice = newStop;
-      order.stoplossTrail.push(newStop); // Add updated stoploss to the trail
-    }
-  }
 
     let exit = null;
     if (type === "call") {
@@ -234,16 +226,12 @@ async function tracker() {
     const calldiff = datalist[datalist.length - 1].callLtp - datalist[0].callLtp;
     const putdiff = datalist[datalist.length - 1].putLtp - datalist[0].putLtp;
 
-    //console.log(`Strike: ${strike}, ${entry.callLtp}|${entry.putLtp} , ${calldiff.toFixed(2)}|${putdiff.toFixed(2)}`);
-    //console.log(`${formatTimestamp()} Strike: ${strike}, ${entry.callLtp}|${entry.putLtp} , ${calldiff.toFixed(2)}|${putdiff.toFixed(2)}`);
-addLog(strike, entry, calldiff, putdiff);
-
+    addLog(strike, entry, calldiff, putdiff);
 
     try {
         for (const lv of levels) {
             if (!orderMemory.call && calldiff > lv.threshold && calldiff > lv.minChange) {
                 const upstoxResult = await placeOrderToUpstox(entry.callToken, qty, datalist[datalist.length - 1].callLtp, lv.stoploss, lv.gap);
-                // Save order data with Upstox order info
                 orderMemory.call = createOrderData("call", entry.callToken, datalist[datalist.length - 1].callLtp, lv.stoploss, lv.gap, qty, upstoxResult && upstoxResult.data ? upstoxResult.data.order_id : null);
                 orderMemory.history.push({ ...orderMemory.call });
                 saveOrderToDisk();
@@ -296,7 +284,6 @@ function addLog(strike, entry, calldiff, putdiff) {
 
   console.log(logEntry);
 }
-
 
 exports.tracker = tracker;
 exports.logList = logList;
