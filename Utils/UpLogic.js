@@ -300,3 +300,4 @@ function addLog(strike, entry, calldiff, putdiff) {
 
 exports.tracker = tracker;
 exports.logList = logList;
+exports.orderMemory = orderMemory;
