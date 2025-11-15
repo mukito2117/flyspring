@@ -1,9 +1,12 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { AppContext } from '../Context/AppContext';
 
 function UserTable() {
   const { logData } = useContext(AppContext);
 
+  useEffect(() => {
+    // This effect runs when logData changes
+  }, [logData]);
   if (!logData.length) {
     return <p>Loading data...</p>;
   }
