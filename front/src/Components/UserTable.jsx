@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 
-function UserTable() {
-  const [users, setUsers] = useState([]);
+function DateTimeLogTable() {
+  const [logData, setLogData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch('/api/users')
+    fetch('/api/datetimelog')
       .then((res) => {
         if (!res.ok) {
           throw new Error('Network response was not ok');
@@ -14,7 +14,7 @@ function UserTable() {
         return res.json();
       })
       .then((data) => {
-        setUsers(data.users);
+        setLogData(data);
         setLoading(false);
       })
       .catch((err) => {
@@ -24,33 +24,31 @@ function UserTable() {
   }, []);
 
   if (loading) {
-    return <p>Loading users...</p>;
+    return <p>Loading datetime log...</p>;
   }
 
   if (error) {
-    return <p>Error loading users: {error}</p>;
+    return <p>Error loading datetime log: {error}</p>;
   }
 
   return (
     <table border="1" cellPadding="10" style={{ borderCollapse: 'collapse' }}>
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Email</th>
+          <th>Index</th>
+          <th>Datetime</th>
         </tr>
       </thead>
       <tbody>
-        {users.length === 0 ? (
+        {logData.length === 0 ? (
           <tr>
-            <td colSpan="3">No users found</td>
+            <td colSpan="2">No datetime log found</td>
           </tr>
         ) : (
-          users.map(({ id, name, email }) => (
-            <tr key={id}>
-              <td>{id}</td>
-              <td>{name}</td>
-              <td>{email}</td>
+          logData.map(({ datetime }, index) => (
+            <tr key={index}>
+              <td>{index + 1}</td>
+              <td>{datetime}</td>
             </tr>
           ))
         )}
@@ -59,4 +57,4 @@ function UserTable() {
   );
 }
 
-export default UserTable;
+export default DateTimeLogTable;

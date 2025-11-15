@@ -1,10 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+const schedule = require('node-schedule');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const filePath = path.join(__dirname, 'datetimeLog.json');
 
 // Middleware
 app.use(cors());
@@ -38,6 +41,28 @@ app.post('/api/users', (req, res) => {
   });
 });
 
+// API endpoint to get datetime log data
+app.get('/api/datetimelog', (req, res) => {
+  if (!fs.existsSync(filePath)) {
+    return res.json([]);
+  }
+
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading datetimeLog.json:', err);
+      return res.status(500).json({ error: 'Failed to read datetime log' });
+    }
+
+    try {
+      const parsedData = JSON.parse(data);
+      res.json(parsedData);
+    } catch (parseError) {
+      console.error('Error parsing datetimeLog.json:', parseError);
+      res.status(500).json({ error: 'Failed to parse datetime log' });
+    }
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -49,7 +74,6 @@ app.get('/', (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  // If the request does not start with /api, send the React app
   if (!req.originalUrl.startsWith('/api')) {
     res.sendFile(path.join(__dirname, 'front', 'build', 'index.html'));
   }
@@ -59,6 +83,35 @@ app.get('*', (req, res) => {
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
+
+// Scheduled job to add current datetime to local JSON file every 10 seconds
+const addCurrentDateTimeToFile = () => {
+  const now = new Date();
+  let data = [];
+
+  if (fs.existsSync(filePath)) {
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    if (fileContent) {
+      try {
+        data = JSON.parse(fileContent);
+      } catch (error) {
+        console.error('Error parsing JSON file, resetting data:', error);
+        data = [];
+      }
+    }
+  }
+
+  data.push({ datetime: now.toISOString() });
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    console.log(`Logged datetime: ${now.toISOString()}`);
+  } catch (error) {
+    console.error('Error writing to JSON file:', error);
+  }
+};
+
+// Schedule job every 10 seconds
+schedule.scheduleJob('*/10 * * * * *', addCurrentDateTimeToFile);
 
 // Start server
 app.listen(PORT, () => {
