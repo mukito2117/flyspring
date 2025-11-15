@@ -24,19 +24,40 @@ function OrdersTable() {
   }, []);
 
   // Define columns for Ant Design Table
-  const columns = [
-    { title: 'Order Type', dataIndex: 'type', key: 'type', width: 120 },
-    { title: 'Instrument Token', dataIndex: 'token', key: 'token' },
-    { title: 'Entry Price', dataIndex: 'entryPrice', key: 'entryPrice', render: (v) => v.toFixed(2) },
-    { title: 'Stoploss Price', dataIndex: 'stoplossPrice', key: 'stoplossPrice', render: (v) => v.toFixed(2) },
-    { title: 'Trailing Gap', dataIndex: 'trailingGap', key: 'trailingGap', render: (v) => v.toFixed(2) },
-    { title: 'Quantity', dataIndex: 'qty', key: 'qty', width: 100 },
-    { title: 'Status', dataIndex: 'status', key: 'status', width: 100 },
-    { title: 'Target Price', dataIndex: 'targetPrice', key: 'targetPrice', render: (v) => v.toFixed(2) },
-    { title: 'Entry Time', dataIndex: 'entryTime', key: 'entryTime' },
-    { title: 'Exit Time', dataIndex: 'exitTime', key: 'exitTime' },
-    { title: 'Exit Reason', dataIndex: 'exitReason', key: 'exitReason' }
-  ];
+const columns = [
+  { title: "Order Type", dataIndex: "type", key: "type" },
+  { title: "Instrument Token", dataIndex: "token", key: "token" },
+  {
+    title: "Entry Price",
+    dataIndex: "entryPrice",
+    key: "entryPrice",
+    render: (v) => (typeof v === "number" ? v.toFixed(2) : "-"),
+  },
+  {
+    title: "Stoploss Price",
+    dataIndex: "stoplossPrice",
+    key: "stoplossPrice",
+    render: (v) => (typeof v === "number" ? v.toFixed(2) : "-"),
+  },
+  {
+    title: "Trailing Gap",
+    dataIndex: "trailingGap",
+    key: "trailingGap",
+    render: (v) => (typeof v === "number" ? v.toFixed(2) : "-"),
+  },
+  { title: "Quantity", dataIndex: "qty", key: "qty" },
+  { title: "Status", dataIndex: "status", key: "status" },
+  {
+    title: "Target Price",
+    dataIndex: "targetPrice",
+    key: "targetPrice",
+    render: (v) => (typeof v === "number" ? v.toFixed(2) : "-"),
+  },
+  { title: "Entry Time", dataIndex: "entryTime", key: "entryTime" },
+  { title: "Exit Time", dataIndex: "exitTime", key: "exitTime" },
+  { title: "Exit Reason", dataIndex: "exitReason", key: "exitReason" },
+];
+
 
   if (loading) return <Spin tip="Loading orders..." />;
   if (error) return <Alert type="error" message={error} />;
