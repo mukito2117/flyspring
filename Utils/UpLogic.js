@@ -251,16 +251,15 @@ async function tracker() {
 // Define the log list with max capacity 10
 const maxLogLength = 10;
 const logList = [];
+
 function formatTimestamp() {
   const now = new Date();
-  const options = { timeZone: 'Asia/Kolkata', month: 'short', hour12: false };
-  const dd = now.toLocaleString('en-US', { ...options, day: '2-digit' });
-  const mmm = now.toLocaleString('en-US', { ...options, month: 'short' });
-  const yyyy = now.toLocaleString('en-US', { ...options, year: 'numeric' });
-  const hh = now.toLocaleString('en-US', { ...options, hour: '2-digit' });
-  const mm = now.toLocaleString('en-US', { ...options, minute: '2-digit' });
-  const ss = now.toLocaleString('en-US', { ...options, second: '2-digit' });
-
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mmm = now.toLocaleString('en-US', { month: 'short' });
+  const yyyy = now.getFullYear();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
   return `${dd}-${mmm}-${yyyy} ${hh}:${mm}:${ss}`;
 }
 
