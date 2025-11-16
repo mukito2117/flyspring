@@ -281,7 +281,6 @@ function addLog(strike, entry, calldiff, putdiff) {
   if (logList.length > maxLogLength) {
     logList.shift();
   }
-
   console.log(logEntry);
 }
 
