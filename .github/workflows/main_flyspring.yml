@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy Node.js app to Azure Web App - app2
+name: Build and deploy Node.js app to Azure Web App - flyspring
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '24.x'
+          node-version: '22.x'
 
       - name: npm install, build, and test
         run: |
@@ -51,15 +51,15 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_73B430F253194E41852B7F7AA1E75DE0 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_53F6A7DCBE3A4DAAAAF1D3FAED66930F }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_816FBDAA9A6B4E74AA3909DF22AB9CFD }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_800F8CCFE66C40E1B2764706240AFA5E }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_AD6CB9FA97254EE9B08D651CFCCD6016 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_EDA455F366A84880B7EB44518C07881C }}
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'app2'
+          app-name: 'flyspring'
           slot-name: 'Production'
           package: .
           
