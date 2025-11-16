@@ -11,7 +11,8 @@ import OrdersTable from "./Components/OrdersTable";
 import { AppContextProvider, AppContext } from "./Context/AppContext";
 
 const { Header, Content, Footer, Sider } = Layout;
-const redirect_url = 'http://localhost/getCode';
+//const redirect_url = 'http://localhost/getCode';
+const redirect_url = 'https://flyspring-feh2b5gqc4bchgh0.canadacentral-01.azurewebsites.net/getCode';
 const clientIds = [
   '64bcafc6-5965-46c3-9e9b-113e396b1ecb',
   '15b39ed0-f0b0-4e16-9948-80a46f62e295',
