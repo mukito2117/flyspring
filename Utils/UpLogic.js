@@ -251,7 +251,7 @@ async function tracker() {
 // Define the log list with max capacity 10
 const maxLogLength = 10;
 const logList = [];
-function formatTimestampIST() {
+function formatTimestamp() {
   const now = new Date();
   const options = { timeZone: 'Asia/Kolkata', month: 'short', hour12: false };
   const dd = now.toLocaleString('en-US', { ...options, day: '2-digit' });
