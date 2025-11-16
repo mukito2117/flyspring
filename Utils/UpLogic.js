@@ -233,14 +233,14 @@ async function tracker() {
             if (!orderMemory.call && calldiff > lv.threshold && calldiff > lv.minChange) {
                 const upstoxResult = await placeOrderToUpstox(entry.callToken, qty, datalist[datalist.length - 1].callLtp, lv.stoploss, lv.gap);
                 orderMemory.call = createOrderData("call", entry.callToken, datalist[datalist.length - 1].callLtp, lv.stoploss, lv.gap, qty, upstoxResult && upstoxResult.data ? upstoxResult.data.order_id : null);
-                orderMemory.history.push({ ...orderMemory.call });
+                orderMemory.history.unshift({ ...orderMemory.call });
                 saveOrderToDisk();
                 break;
             }
             if (!orderMemory.put && putdiff > lv.threshold && datalist[0].putLtp > lv.minChange) {
                 const upstoxResult = await placeOrderToUpstox(entry.putToken, qty, datalist[datalist.length - 1].putLtp, lv.stoploss, lv.gap);
                 orderMemory.put = createOrderData("put", entry.putToken, datalist[datalist.length - 1].putLtp, lv.stoploss, lv.gap, qty, upstoxResult && upstoxResult.data ? upstoxResult.data.order_id : null);
-                orderMemory.history.push({ ...orderMemory.put });
+                orderMemory.history.unshift({ ...orderMemory.put });
                 saveOrderToDisk();
                 break;
             }
@@ -289,3 +289,6 @@ exports.tracker = tracker;
 exports.logList = logList;
 exports.orderMemory = orderMemory;
 exports.tokens = tokens;
+exports.instrumentKey = instrumentKey;
+exports.qty = qty;
+exports.expiryDate = expiryDate;

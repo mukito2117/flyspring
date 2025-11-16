@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import schedule from 'node-schedule';
 import dotenv from 'dotenv';
-import { tracker, logList, orderMemory,tokens } from './Utils/UpLogic.js';
+import { tracker, logList, orderMemory,tokens,instrumentKey,qty,expiryDate } from './Utils/UpLogic.js';
 import { getToken,getTokenbyAuthCode } from './Utils/upLogin.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -92,6 +92,17 @@ app.get('/api/datetimelog', (req, res) => {
 // New API endpoint to get in-memory logList data
 app.get('/api/loglist', (req, res) => {
   res.json(logList);
+});
+
+
+app.post('/api/setExpiry', (req, res) => {
+  const index = req.body.index;
+  const expiry = req.body.expiry;
+  instrumentKey = index;
+  expiryDate = expiry;
+  qty = index.includes('Nifty') ? 75 : 25;
+
+  res.json('Expiry date set successfully' );
 });
 
 // Health check endpoint
