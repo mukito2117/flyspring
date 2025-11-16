@@ -5,6 +5,7 @@ import fs from 'fs';
 import schedule from 'node-schedule';
 import dotenv from 'dotenv';
 import { tracker, logList, orderMemory } from './Utils/UpLogic.js';
+import { getToken } from './Utils/upLogin.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -26,6 +27,10 @@ app.use(express.static(path.join(__dirname, 'front', 'build')));
 
 app.get("/placeorder/details", (req, res) => {
     res.json(orderMemory);
+});
+
+app.get("/token", async(req, res) => {
+     res.json(await getToken());
 });
 
 // API Routes
@@ -102,7 +107,8 @@ app.use((req, res) => {
 });
 
 // Schedule tracker job every second
-schedule.scheduleJob('*/1 * * * * *', tracker);
+
+//schedule.scheduleJob('*/1 * * * * *', tracker);
 
 // Start server
 app.listen(PORT, () => {
