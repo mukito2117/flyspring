@@ -284,6 +284,7 @@ function addLog(strike, entry, calldiff, putdiff) {
   console.log(logEntry);
 }
 
+
 exports.tracker = tracker;
 exports.logList = logList;
 exports.orderMemory = orderMemory;
