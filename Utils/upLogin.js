@@ -4,7 +4,8 @@ const { Builder, By, Key, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');  // Import chrome options
 const speakeasy = require('speakeasy');
 
-const redirectUri = 'http://localhost/getCode';
+//const redirectUri = 'http://localhost/getCode';
+const redirectUri = 'https://flyspring-feh2b5gqc4bchgh0.canadacentral-01.azurewebsites.net/getCode';
 const mobileNumber = '9773544834';
 const totpkey = '5IM3OQ4XMF2YK6ZD6T62TO36BBMYERWN';
 
@@ -32,6 +33,13 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function getTokenbyAuthCode(authcode, state)
+{
+    const apikey = apikeys[state-1];
+    const apiSecretKey = apiSecret[state-1];
+    const data = await getUpstoxAccessToken(apikey, apiSecretKey, redirectUri, authcode);
+    return data.access_token;
+}
 /**
  * Calls Upstox token API to exchange authorization code for access token.
  * Returns full response data (including access_token, extended_token, etc.)
@@ -166,3 +174,4 @@ async function getToken() {
 }
 
 exports.getToken = getToken;
+exports.getTokenbyAuthCode = getTokenbyAuthCode;

@@ -4,8 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import schedule from 'node-schedule';
 import dotenv from 'dotenv';
-import { tracker, logList, orderMemory } from './Utils/UpLogic.js';
-import { getToken } from './Utils/upLogin.js';
+import { tracker, logList, orderMemory,tokens } from './Utils/UpLogic.js';
+import { getToken,getTokenbyAuthCode } from './Utils/upLogin.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -29,8 +29,17 @@ app.get("/placeorder/details", (req, res) => {
     res.json(orderMemory);
 });
 
+app.get("/getCode", async(req, res) => {
+  let state = req.query.state.replace('state','');
+console.log("Authorization code received:", req.query.code+' - State: '+state);
+  const access_token = await getTokenbyAuthCode(req.query.code, state);
+  tokens[state-1] = access_token;
+     res.json(access_token);
+});
+
 app.get("/token", async(req, res) => {
-     res.json(await getToken());
+    // res.json(await getToken());
+     res.json( tokens);
 });
 
 // API Routes
@@ -108,7 +117,7 @@ app.use((req, res) => {
 
 // Schedule tracker job every second
 
-//schedule.scheduleJob('*/1 * * * * *', tracker);
+schedule.scheduleJob('*/1 * * * * *', tracker);
 
 // Start server
 app.listen(PORT, () => {

@@ -11,9 +11,64 @@ import OrdersTable from "./Components/OrdersTable";
 import { AppContextProvider, AppContext } from "./Context/AppContext";
 
 const { Header, Content, Footer, Sider } = Layout;
+const redirect_url = 'http://localhost/getCode';
+const clientIds = [
+  '64bcafc6-5965-46c3-9e9b-113e396b1ecb',
+  '15b39ed0-f0b0-4e16-9948-80a46f62e295',
+  '6cfc3a27-df0f-4aa8-9e33-7b8bc20b255b',
+  '7b717ec7-2cd4-4ff8-b852-de03162a80f1',
+  'a34aec7f-b199-4fc7-b0a3-ee965b61d9e1',
+  '03f2cbd6-b835-43ad-a587-ca8a6190bf33',
+];
+
+const stateValues = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+];
 
 function Dashboard() {
   return (
+    <div
+      style={{
+        display: "flex",
+        gap: 20,
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+      }}>
+     
+ <div
+      style={{
+        display: "flex",
+        gap: 20,
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+        flexDirection: "row",
+      }}
+    >
+      {clientIds.map((clientId, index) => {
+        const state = stateValues[index];
+        const url = `https://api.upstox.com/v2/login/authorization/dialog?response_type=code&client_id=${clientId}&redirect_uri=${redirect_url}&state=${state}`;
+        return (
+          <a
+            key={index}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: "none" }}
+          >
+            <button style={{ cursor: "pointer" }}>
+              GenerateToken{index + 1}
+            </button>
+          </a>
+        );
+      })}
+    </div>
+    
+
     <div
       style={{
         display: "flex",
@@ -30,6 +85,7 @@ function Dashboard() {
         <h2>Orders Table</h2>
         <OrdersTable />
       </div>
+    </div>
     </div>
   );
 }
