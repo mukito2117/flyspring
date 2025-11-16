@@ -25,8 +25,7 @@ const { Header, Content, Footer, Sider } = Layout;
 const { Option } = Select;
 const { Text } = Typography;
 
-const redirect_url =
-  "https://flyspring-feh2b5gqc4bchgh0.canadacentral-01.azurewebsites.net/getCode";
+const redirect_url = "https://flyspring-feh2b5gqc4bchgh0.canadacentral-01.azurewebsites.net/getCode";
 
 const clientIds = [
   "64bcafc6-5965-46c3-9e9b-113e396b1ecb",
@@ -72,9 +71,7 @@ function Dashboard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
       {/* Top card with dropdown, datepicker, and update button */}
-      <Card
-        style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
-      >
+      <Card style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
         <Space align="center" size="middle" wrap>
           <Select
             value={selectedIndex}
@@ -87,10 +84,7 @@ function Dashboard() {
           </Select>
 
           <Text strong>Select Expiry</Text>
-          <DatePicker
-            onChange={(_, dateString) => setExpiryDate(dateString)}
-            style={{ width: 160 }}
-          />
+          <DatePicker onChange={(_, dateString) => setExpiryDate(dateString)} style={{ width: 160 }} />
 
           <Button type="primary" onClick={handleUpdateClick}>
             Update
@@ -101,10 +95,7 @@ function Dashboard() {
       {/* Token generation buttons */}
       <Card
         title="Generate Tokens"
-        style={{
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-          borderRadius: 8,
-        }}
+        style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.08)", borderRadius: 8 }}
       >
         <Space wrap>
           {clientIds.map((clientId, index) => {
@@ -164,13 +155,9 @@ function Dashboard() {
             borderRadius: 8,
           }}
           bodyStyle={{ padding: 16 }}
+          className="ltp-table-card"
         >
-          <div
-            style={{
-              borderRadius: 6,
-              overflow: "hidden",
-            }}
-          >
+          <div style={{ borderRadius: 6, overflow: "hidden" }}>
             <UserTable />
           </div>
         </Card>
@@ -186,16 +173,63 @@ function Dashboard() {
           }}
           bodyStyle={{ padding: 16 }}
         >
-          <div
-            style={{
-              borderRadius: 6,
-              overflow: "hidden",
-            }}
-          >
+          <div style={{ borderRadius: 6, overflow: "hidden" }}>
             <OrdersTable />
           </div>
         </Card>
       </div>
+
+      {/* Scoped styles to reorder LTP table on mobile */}
+      <style jsx>{`
+        /* Desktop: no change */
+        @media (max-width: 768px) {
+          /* Hide normal header cells except timestamp and strike */
+          .ltp-table-card .ant-table-thead > tr > th {
+            display: none;
+          }
+          .ltp-table-card .ant-table-thead > tr > th:nth-child(1),
+          .ltp-table-card .ant-table-thead > tr > th:nth-child(2) {
+            display: table-cell;
+          }
+
+          /* Change each table row into a multi-line block */
+          .ltp-table-card .ant-table-tbody > tr > td {
+            display: block;
+            border: none;
+            padding: 6px 12px !important;
+            box-sizing: border-box;
+            width: 100%;
+          }
+          /* Hide default cells except timestamp and strike */
+          .ltp-table-card .ant-table-tbody > tr > td:nth-child(n + 3) {
+            display: none;
+          }
+          /* Use ::before pseudo element to add lines for call and put data */
+          .ltp-table-card .ant-table-tbody > tr {
+            position: relative;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+          }
+          .ltp-table-card .ant-table-tbody > tr::before {
+            content: attr(data-time-strike);
+            display: block;
+            font-weight: 600;
+            white-space: nowrap;
+            margin-bottom: 4px;
+          }
+          .ltp-table-card .ant-table-tbody > tr::after {
+            content: attr(data-call-ltp) "  " attr(data-call-diff);
+            display: block;
+            margin-bottom: 2px;
+            color: #1890ff;
+          }
+          .ltp-table-card .ant-table-tbody > tr > td:first-child::after {
+            content: attr(data-put-ltp) "  " attr(data-put-diff);
+            display: block;
+            color: #f5222d;
+          }
+        }
+      `}</style>
     </div>
   );
 }
