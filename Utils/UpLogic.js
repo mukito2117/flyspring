@@ -264,7 +264,6 @@ function formatTimestamp() {
   return `${dd}-${mmm}-${yyyy} ${hh}:${mm}:${ss}`;
 }
 
-
 function addLog(strike, entry, calldiff, putdiff) {
   const timestamp = formatTimestamp();
   const logEntry = {
