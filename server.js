@@ -176,7 +176,7 @@ mongoClient.getData('upstoxTokens').then((data)=>{
 //schedule.scheduleJob('*/1 * * * * *', tracker);
 await MongoDBClient.connect(); 
 await getTokenfromMongodb();
-setInterval(tracker, 500);
+setInterval(tracker, 300);
 
 
 

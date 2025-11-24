@@ -30,7 +30,7 @@ const apiSecret = [
 const pinCode = '171285';
 
 
-const MongoDBClient = require('./MongoDBClient');
+const MongoDBClient = require('./Utils/MongoDBClient.js');
 const mongoClient = new MongoDBClient();
 
 

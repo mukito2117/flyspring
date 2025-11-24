@@ -37,16 +37,26 @@ const HISTORY_WINDOW = 3000; // 3 seconds
 const HISTORY_LIMIT = HISTORY_WINDOW / 250; // 12 samples
 let strikeHistory = {};
 
+
+
+const levels = [
+    { threshold: 500, minChange: 30, stoploss: 10, gap: 1 },
+    { threshold: 400, minChange: 20, stoploss: 7, gap: 1 },
+    { threshold: 300, minChange: 15, stoploss: 6, gap: 1 },
+    { threshold: 200, minChange: 10, stoploss: 5, gap: 1 },
+    { threshold: 100, minChange: 5, stoploss: 4, gap: 1 },
+    { threshold: 50, minChange: 3, stoploss: 3, gap: 1 },
+    { threshold: 25, minChange: 2, stoploss: 2, gap: 1 },
+    { threshold: 10, minChange: 2, stoploss: 2, gap: 1 },
+   // { threshold: 5, minChange: 0.75, stoploss: 0.5, gap: 0.25 }
+];
+
 // Order memory
 const orderMemory = {
     call: null,
     put: null
 };
 
-// Save order to disk
-function saveOrderToDisk() {
-    fs.writeFileSync("./orderjson.json", JSON.stringify(orderMemory, null, 4));
-}
 
 // Place order
 async function placeOrderToUpstox(type, token, entryPrice, stoploss, trailingGap, qty) {
@@ -149,48 +159,158 @@ async function getLtp(keys, strike) {
     }
 }
 
-// Detect trend and place orders
-async function detectTrendMove(strike) {
+const MongoDBClient = require("./mongodbclient");  // <-- your MongoDB client
+
+// Detect trend and place orders using levels[]
+async function detectTrendMove(strike) { 
     const history = strikeHistory[strike];
     if (!history || history.length < 3) return;
 
     const first = history[0];
     const last = history[history.length - 1];
 
-    const callLtpChange = ((last.callLtp - first.callLtp) / first.callLtp) * 100;
-    const putLtpChange = ((last.putLtp - first.putLtp) / first.putLtp) * 100;
+    // --------------------------
+    // FIND LEVEL BASED ON LTP
+    // --------------------------
+    function getLevel(ltp) {
+        return levels.find(l => ltp >= l.threshold) 
+            || levels[levels.length - 1];
+    }
 
+    const callLevel = getLevel(last.callLtp);
+    const putLevel  = getLevel(last.putLtp);
+
+    // --------------------------
+    // CALCULATE LTP DIFFERENCE
+    // --------------------------
+    const callLtpDiff = last.callLtp - first.callLtp;
+    const putLtpDiff  = last.putLtp - first.putLtp;
+
+    // OI / Volume / IV
     const callOIChange = ((last.callOI - first.callOI) / first.callOI) * 100;
-    const putOIChange = ((last.putOI - first.putOI) / first.putOI) * 100;
+    const putOIChange  = ((last.putOI - first.putOI) / first.putOI) * 100;
 
     const callVolRatio = last.callVolume / first.callVolume;
-    const putVolRatio = last.putVolume / first.putVolume;
+    const putVolRatio  = last.putVolume / first.putVolume;
 
     const callIVChange = last.callIV - first.callIV;
-    const putIVChange = last.putIV - first.putIV;
+    const putIVChange  = last.putIV - first.putIV;
 
     try {
-        // CALL order
-        if (callLtpChange > LTPChange || callOIChange > OIChange || callVolRatio > VolChange || callIVChange > IVChange) {
-            const callStopLoss = last.callLtp - 2;
-            const callTrailing = 1;
-            const callResult = await placeOrderToUpstox("CALL", last.callToken, last.callLtp, callStopLoss, callTrailing, qty);
-            console.log(`CALL Order Placed on Strike ${strike}:`, callResult);
-            strikeHistory[strike] = []; // clear history after order
+
+        // ==========================================================
+        // CALL SIGNAL CHECK
+        // ==========================================================
+        if (callLtpDiff >= callLevel.minChange 
+            || callOIChange > OIChange 
+            || callVolRatio > VolChange 
+            || callIVChange > IVChange) {
+
+            // --------------------------
+            // INSERT ALERT INTO MONGO
+            // --------------------------
+            const mongo = new MongoDBClient();
+            await mongo.insertData("alerts", {
+                strike,
+                side: "CALL",
+                firstLTP: first.callLtp,
+                lastLTP: last.callLtp,
+                difference: callLtpDiff,
+                level: callLevel,
+                callOIChange,
+                callVolRatio,
+                callIVChange,
+                token: last.callToken,
+                timestamp: new Date()
+            });
+
+            // --------------------------
+            // PLACE CALL ORDER
+            // --------------------------
+            const callStopLoss = last.callLtp - callLevel.stoploss;
+            const callTrailing = callLevel.gap;
+
+            const callResult = await placeOrderToUpstox(
+                "CALL",
+                last.callToken,
+                last.callLtp,
+                callStopLoss,
+                callTrailing,
+                qty
+            );
+
+            console.log(`🔥 CALL Order Triggered on ${strike}`);
+            console.log({
+                firstLTP: first.callLtp,
+                lastLTP: last.callLtp,
+                diff: callLtpDiff,
+                levelUsed: callLevel
+            });
+            console.log("Order:", callResult);
+
+            // RESET HISTORY
+            strikeHistory[strike] = [];
         }
 
-        // PUT order
-        if (putLtpChange > LTPChange || putOIChange > OIChange || putVolRatio > VolChange || putIVChange > IVChange) {
-            const putStopLoss = last.putLtp - 2;
-            const putTrailing = 1;
-            const putResult = await placeOrderToUpstox("PUT", last.putToken, last.putLtp, putStopLoss, putTrailing, qty);
-            console.log(`PUT Order Placed on Strike ${strike}:`, putResult);
-            strikeHistory[strike] = []; // clear history after order
+        // ==========================================================
+        // PUT SIGNAL CHECK
+        // ==========================================================
+        if (putLtpDiff >= putLevel.minChange 
+            || putOIChange > OIChange 
+            || putVolRatio > VolChange 
+            || putIVChange > IVChange) {
+
+            // --------------------------
+            // INSERT ALERT INTO MONGO
+            // --------------------------
+            const mongo = new MongoDBClient();
+            await mongo.insertData("alerts", {
+                strike,
+                side: "PUT",
+                firstLTP: first.putLtp,
+                lastLTP: last.putLtp,
+                difference: putLtpDiff,
+                level: putLevel,
+                putOIChange,
+                putVolRatio,
+                putIVChange,
+                token: last.putToken,
+                timestamp: new Date()
+            });
+
+            // --------------------------
+            // PLACE PUT ORDER
+            // --------------------------
+            const putStopLoss = last.putLtp - putLevel.stoploss;
+            const putTrailing = putLevel.gap;
+
+            const putResult = await placeOrderToUpstox(
+                "PUT",
+                last.putToken,
+                last.putLtp,
+                putStopLoss,
+                putTrailing,
+                qty
+            );
+
+            console.log(`🔥 PUT Order Triggered on ${strike}`);
+            console.log({
+                firstLTP: first.putLtp,
+                lastLTP: last.putLtp,
+                diff: putLtpDiff,
+                levelUsed: putLevel
+            });
+            console.log("Order:", putResult);
+
+            // RESET HISTORY
+            strikeHistory[strike] = [];
         }
+
     } catch (err) {
         console.error("❌ Error placing order:", err.message);
     }
 }
+
 
 // Tracker function
 async function tracker() {
@@ -205,7 +325,7 @@ async function tracker() {
 
     const { strike, callKey, putKey } = result;
     const ltpResult = await getLtp([callKey, putKey].join(","), strike); 
-    console.log(ltpResult.strike+'|'+ltpResult.callLtp+'|'+ltpResult.putLtp);
+    console.log(Date.now()+' >> '+ ltpResult.strike+'|'+ltpResult.callLtp+'|'+ltpResult.putLtp);
     if (!ltpResult) return;
 
     saveToHistory(ltpResult);
