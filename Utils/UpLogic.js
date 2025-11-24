@@ -1,53 +1,55 @@
 const fs = require("fs");
 const axios = require("axios");
-const { log } = require("console");
+
 const API_URL = "https://api.upstox.com/v2/option/chain";
-const LTP_API_URL = "https://api.upstox.com/v2/market-quote/ltp";
+const option_greek_API_URL = "https://api.upstox.com/v3/market-quote/option-greek";
 const ORDER_API_URL = "https://api.upstox.com/v3/order/gtt/place";
 
-const instrumentKey = "NSE_INDEX|Nifty 50";
-const qty = 75;
-const expiryDate = "2025-11-18";
+// Configurable Tokens
 const tokens = [
-    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTE4Zjg4ZjVkNjFkNDRlYWI2MTZhNzgiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYzMjQ0MTc1LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjMzMzA0MDB9.X5Oyop4__3GUlm-uEY5vKQVtGe5OGUg9iB8AXmPqgQA",
-    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTE4Zjg5MWJiZjU2ODY3NGZlZWEyZmUiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYzMjQ0MTc3LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjMzMzA0MDB9.CJ7_o3b2yoiTgbBRYxEHSidb8OUSt8PmJ0aAu2LlF6o",
-    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTE4Zjg5OGJiZjU2ODY3NGZlZWEyZmYiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYzMjQ0MTg0LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjMzMzA0MDB9.Vs1PqPLvKKOvllawKVZbmOE2UksxiMUnWw1DFJy_MxQ",
-    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTE4Zjg5NDVkNjFkNDRlYWI2MTZhNzkiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYzMjQ0MTgwLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjMzMzA0MDB9.e338GCGpBRF_3bREh4hPgwaNBjVDsNFtWMqO1Q5xwOA",
-    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTE4Zjg5YjVkNjFkNDRlYWI2MTZhN2EiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYzMjQ0MTg3LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjMzMzA0MDB9.4hk12vnY4hCHWU5Lg0L0qeT98I7zHLJqIkEorajS8zQ",
-    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTE4Zjg5ZWJiZjU2ODY3NGZlZWEzMDAiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYzMjQ0MTkwLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjMzMzA0MDB9.YiSbS8eoZtzoA0_D9sRTTSZdPZyLWxI2nj534nMk8bM"
+    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTIzY2RjNGFhNDdmMDczMmM0MWNlYjAiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2Mzk1NDExNiwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY0MDIxNjAwfQ.B09bv6sS9gI9BQS8r_UNE2qa1nxbMrWI3wR2AZ-fQ3E",
+    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTIzY2RjNzU0ZDU3NTI1YTFiNGY5YjQiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2Mzk1NDExOSwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY0MDIxNjAwfQ.mbaFfJW4psG8HQC0hNLvqqjTmCVET5DL6WGWiA5uBJs",
+    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTIzY2RjOWUwNmRjMTY2MTgzNzBmMjIiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2Mzk1NDEyMSwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY0MDIxNjAwfQ.5YWQ9TXSwZsMxCTCCKBBaqTUKJKmpR9IvmZXBaT_8oY",
+    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTIzY2RjY2UwNmRjMTY2MTgzNzBmMjUiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2Mzk1NDEyNCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY0MDIxNjAwfQ.GDxoDq15TmVpvFqfkFPEMQlsAs-8luRmdImQt1qHNL0",
+    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTIzY2RjZTFjM2U0NTVkYTNlODgwZjAiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2Mzk1NDEyNiwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY0MDIxNjAwfQ.WIVq6UZMcVUd4fhbAvLBjV-sjyb5NMzLD8-t64la1LU",
+    "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI2TUFTWlIiLCJqdGkiOiI2OTIzY2RkMTU0ZDU3NTI1YTFiNGY5YjgiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2Mzk1NDEyOSwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY0MDIxNjAwfQ.2Dc5zpPlSxSgnyIw_qLUGZ4xbQs4JEtmubvylf-Vu1Q"
 ];
 let tokenIndex = 0;
 
-function getToken() {
+async function getToken() {
     tokenIndex = (tokenIndex + 1) % tokens.length;
     return tokens[tokenIndex];
 }
 
-let datalist = [];
-const datalistLength = 5;
+// Instrument details
+let instrumentKey = null;
+let expiryDate = null;
+let qty = null;
 
-const levels = [
-    { threshold: 500, minChange: 30, stoploss: 10, gap: 1 },
-    { threshold: 400, minChange: 20, stoploss: 7, gap: 1 },
-    { threshold: 300, minChange: 15, stoploss: 6, gap: 1 },
-    { threshold: 200, minChange: 10, stoploss: 5, gap: 1 },
-    { threshold: 100, minChange: 5, stoploss: 4, gap: 1 },
-    { threshold: 50, minChange: 3, stoploss: 3, gap: 1 },
-    { threshold: 25, minChange: 2, stoploss: 2, gap: 1 },
-    { threshold: 10, minChange: 2, stoploss: 2, gap: 1 }
-];
+// Thresholds
+const LTPChange = 5; // percentage
+const OIChange = 10; // percentage
+const VolChange = 2; // percentage
+const IVChange = 0.5; // absolute change
 
+// History tracking
+const HISTORY_WINDOW = 3000; // 3 seconds
+const HISTORY_LIMIT = HISTORY_WINDOW / 250; // 12 samples
+let strikeHistory = {};
+
+// Order memory
 const orderMemory = {
     call: null,
-    put: null,
-    history: []
+    put: null
 };
 
+// Save order to disk
 function saveOrderToDisk() {
     fs.writeFileSync("./orderjson.json", JSON.stringify(orderMemory, null, 4));
 }
 
-async function placeOrderToUpstox(token, qty, entryPrice, stoploss, trailingGap) {
+// Place order
+async function placeOrderToUpstox(type, token, entryPrice, stoploss, trailingGap, qty) {
     const payload = {
         type: 'MULTIPLE',
         quantity: qty,
@@ -63,46 +65,35 @@ async function placeOrderToUpstox(token, qty, entryPrice, stoploss, trailingGap)
     const headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${getToken()}`
+        'Authorization': `Bearer ${await getToken()}`
     };
     try {
         const response = await axios.post(ORDER_API_URL, payload, { headers });
         if (response.data.status !== "success") throw new Error("Order rejected: " + JSON.stringify(response.data));
         return response.data;
     } catch (e) {
-        console.error("Failed to place real Upstox order:", e.message);
+        console.error(`Failed to place ${type} order:`, e.message);
         return null;
     }
 }
 
-function createOrderData(type, token, entryPrice, stoploss, trailingGap, qty, realOrderId = null) {
-    const now = new Date().toISOString();
-    return {
-        type,
-        token,
-        entryPrice,
-        stoplossPrice: entryPrice - stoploss,
-        trailingGap,
-        qty,
-        status: "active",
-        targetPrice: entryPrice * 25,
-        entryTime: now,
-        exitTime: null,
-        exitReason: null,
-        ltpTrail: [entryPrice],
-        stoplossTrail: [], 
-        realOrderId
-    };
+// Save history of LTP/OI/IV/Volume
+function saveToHistory(data) {
+    if (!data || !data.strike) return;
+    const key = data.strike;
+    if (!strikeHistory[key]) strikeHistory[key] = [];
+    strikeHistory[key].push(data);
+    if (strikeHistory[key].length > HISTORY_LIMIT) strikeHistory[key].shift();
 }
 
+// Fetch nearest option instrument keys
 async function getNearestOptionInstrumentKeys() {
     try {
-        const response = await axios.get(API_URL, {
-            params: { instrument_key: instrumentKey, expiry_date: expiryDate },
-            headers: { Accept: "application/json", Authorization: `Bearer ${getToken()}` }
-        });
+        const _headers = { Accept: "application/json", Authorization: `Bearer ${await getToken()}` };
+        const response = await axios.get(API_URL, { params: { instrument_key: instrumentKey, expiry_date: expiryDate }, headers: _headers });
         const options = response.data.data;
-        if (!options || options.length === 0) throw new Error("No option chain data.");
+        if (!options || options.length === 0) return null;
+
         let nearest = null, minDiff = Infinity;
         for (const option of options) {
             if (typeof option.strike_price === "number" && typeof option.underlying_spot_price === "number") {
@@ -113,13 +104,11 @@ async function getNearestOptionInstrumentKeys() {
                 }
             }
         }
-        if (!nearest) throw new Error("No nearest option found.");
+        if (!nearest) return null;
         return {
             callKey: nearest.call_options.instrument_key,
             putKey: nearest.put_options.instrument_key,
-            strike: nearest.strike_price,
-            spot: nearest.underlying_spot_price,
-            diff: minDiff
+            strike: nearest.strike_price
         };
     } catch (error) {
         console.error("Failed to get option keys:", error.message);
@@ -127,168 +116,138 @@ async function getNearestOptionInstrumentKeys() {
     }
 }
 
-async function getLtp(keys) {
+// Fetch LTP data
+async function getLtp(keys, strike) {
     try {
-        const response = await axios.get(LTP_API_URL, {
+        const response = await axios.get(option_greek_API_URL, {
             params: { instrument_key: keys },
-            headers: { Accept: "application/json", Authorization: `Bearer ${getToken()}` }
+            headers: { Accept: "application/json", Authorization: `Bearer ${await getToken()}` }
         });
+
         const ltpData = response.data.data || {};
-        let result = { call: null, put: null };
+        let result = { strike, callToken: null, callLtp: null, callVolume: null, callIV: null, callOI: null, putToken: null, putLtp: null, putVolume: null, putIV: null, putOI: null };
+
         for (const key in ltpData) {
-            if (key.includes("CE")) result.call = ltpData[key];
-            else if (key.includes("PE")) result.put = ltpData[key];
+            if (key.includes("CE")) {
+                result.callToken = ltpData[key].instrument_token;
+                result.callLtp = ltpData[key].last_price;
+                result.callVolume = ltpData[key].volume;
+                result.callIV = ltpData[key].iv;
+                result.callOI = ltpData[key].oi;
+            } else if (key.includes("PE")) {
+                result.putToken = ltpData[key].instrument_token;
+                result.putLtp = ltpData[key].last_price;
+                result.putVolume = ltpData[key].volume;
+                result.putIV = ltpData[key].iv;
+                result.putOI = ltpData[key].oi;
+            }
         }
         return result;
     } catch (error) {
-        console.error("Failed to get LTP:", error.message);
+        console.error("Failed to get LTP:", keys, strike, error.message);
         return null;
     }
 }
 
-async function monitorOrderLtp(type, lastLtp) {
-    const order = orderMemory[type];
-    if (!order || order.status !== "active") return false;
-    order.ltpTrail.push(lastLtp);
+// Detect trend and place orders
+async function detectTrendMove(strike) {
+    const history = strikeHistory[strike];
+    if (!history || history.length < 3) return;
 
-    // Trailing logic
-    if (type === "call") {
-        let newStop = Math.max(order.stoplossPrice, lastLtp - order.trailingGap);
-        if (newStop > order.stoplossPrice) {
-            order.stoplossPrice = newStop;
-            order.stoplossTrail.push(newStop);
-        }
-    } else if (type === "put") {
-        let newStop = Math.min(order.stoplossPrice, lastLtp + order.trailingGap);
-        if (newStop < order.stoplossPrice) {
-            order.stoplossPrice = newStop;
-            order.stoplossTrail.push(newStop);
-        }
-    }
+    const first = history[0];
+    const last = history[history.length - 1];
 
-    let exit = null;
-    if (type === "call") {
-        if (lastLtp >= order.targetPrice) exit = "target";
-        else if (lastLtp <= order.stoplossPrice) exit = "stoploss";
-    } else {
-        if (lastLtp >= order.targetPrice) exit = "target";
-        else if (lastLtp <= order.stoplossPrice) exit = "stoploss";
-    }
+    const callLtpChange = ((last.callLtp - first.callLtp) / first.callLtp) * 100;
+    const putLtpChange = ((last.putLtp - first.putLtp) / first.putLtp) * 100;
 
-    if (exit !== null) {
-        order.status = "exited";
-        order.exitTime = new Date().toISOString();
-        order.exitReason = exit;
-        saveOrderToDisk();
-        orderMemory[type] = null;
-        console.log(`Order ${type.toUpperCase()} exited by ${exit}.`);
-        return true;
-    }
-    return false;
-}
+    const callOIChange = ((last.callOI - first.callOI) / first.callOI) * 100;
+    const putOIChange = ((last.putOI - first.putOI) / first.putOI) * 100;
 
-let lastStrike = null;
+    const callVolRatio = last.callVolume / first.callVolume;
+    const putVolRatio = last.putVolume / first.putVolume;
 
-async function tracker() {
-    const result = await getNearestOptionInstrumentKeys();
-    if (!result) return;
-    const { strike, callKey, putKey } = result;
-    const ltpResult = await getLtp([callKey, putKey].join(","));
-    if (!ltpResult || !ltpResult.call || !ltpResult.put) return;
-
-    let entry = {
-        strikePrice: strike,
-        callLtp: ltpResult.call.last_price,
-        callToken: ltpResult.call.instrument_token,
-        putLtp: ltpResult.put.last_price,
-        putToken: ltpResult.put.instrument_token
-    };
-
-    if (lastStrike !== null && strike !== lastStrike) {
-        if (strike > lastStrike && strike - lastStrike <= 100) {
-            // Upward logical jump; keep datalist
-        } else if (strike < lastStrike) {
-            datalist = [];
-        }
-    }
-    lastStrike = strike;
-    datalist.push(entry);
-    if (datalist.length > datalistLength) datalist.shift();
-    if (datalist.length > 1)
-        while (datalist.length && datalist[0].strikePrice < strike) datalist.shift();
-
-    // Monitor open orders' exit logic (trailing, stoploss, target)
-    if (orderMemory.call) await monitorOrderLtp("call", entry.callLtp);
-    if (orderMemory.put) await monitorOrderLtp("put", entry.putLtp);
-
-    if (datalist.length < datalistLength) return;
-
-    const calldiff = datalist[datalist.length - 1].callLtp - datalist[0].callLtp;
-    const putdiff = datalist[datalist.length - 1].putLtp - datalist[0].putLtp;
-
-    addLog(strike, entry, calldiff, putdiff);
+    const callIVChange = last.callIV - first.callIV;
+    const putIVChange = last.putIV - first.putIV;
 
     try {
-        for (const lv of levels) {
-            if (!orderMemory.call && calldiff > lv.threshold && calldiff > lv.minChange) {
-                const upstoxResult = await placeOrderToUpstox(entry.callToken, qty, datalist[datalist.length - 1].callLtp, lv.stoploss, lv.gap);
-                orderMemory.call = createOrderData("call", entry.callToken, datalist[datalist.length - 1].callLtp, lv.stoploss, lv.gap, qty, upstoxResult && upstoxResult.data ? upstoxResult.data.order_id : null);
-                orderMemory.history.unshift({ ...orderMemory.call });
-                saveOrderToDisk();
-                break;
-            }
-            if (!orderMemory.put && putdiff > lv.threshold && datalist[0].putLtp > lv.minChange) {
-                const upstoxResult = await placeOrderToUpstox(entry.putToken, qty, datalist[datalist.length - 1].putLtp, lv.stoploss, lv.gap);
-                orderMemory.put = createOrderData("put", entry.putToken, datalist[datalist.length - 1].putLtp, lv.stoploss, lv.gap, qty, upstoxResult && upstoxResult.data ? upstoxResult.data.order_id : null);
-                orderMemory.history.unshift({ ...orderMemory.put });
-                saveOrderToDisk();
-                break;
-            }
+        // CALL order
+        if (callLtpChange > LTPChange || callOIChange > OIChange || callVolRatio > VolChange || callIVChange > IVChange) {
+            const callStopLoss = last.callLtp - 2;
+            const callTrailing = 1;
+            const callResult = await placeOrderToUpstox("CALL", last.callToken, last.callLtp, callStopLoss, callTrailing, qty);
+            console.log(`CALL Order Placed on Strike ${strike}:`, callResult);
+            strikeHistory[strike] = []; // clear history after order
         }
-    } catch (e) { console.error(e); }
+
+        // PUT order
+        if (putLtpChange > LTPChange || putOIChange > OIChange || putVolRatio > VolChange || putIVChange > IVChange) {
+            const putStopLoss = last.putLtp - 2;
+            const putTrailing = 1;
+            const putResult = await placeOrderToUpstox("PUT", last.putToken, last.putLtp, putStopLoss, putTrailing, qty);
+            console.log(`PUT Order Placed on Strike ${strike}:`, putResult);
+            strikeHistory[strike] = []; // clear history after order
+        }
+    } catch (err) {
+        console.error("❌ Error placing order:", err.message);
+    }
 }
 
-// Define the log list with max capacity 10
-const maxLogLength = 10;
-const logList = [];
+// Tracker function
+async function tracker() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (!instrumentKey || !qty || !expiryDate || new Date(expiryDate) < today) {
+        await setExpiry();
+    }
 
-function formatTimestamp() {
-  const now = new Date();
-  const dd = String(now.getDate()).padStart(2, '0');
-  const mmm = now.toLocaleString('en-US', { month: 'short' });
-  const yyyy = now.getFullYear();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  const ss = String(now.getSeconds()).padStart(2, '0');
-  return `${dd}-${mmm}-${yyyy} ${hh}:${mm}:${ss}`;
+    const result = await getNearestOptionInstrumentKeys();
+    if (!result) return;
+
+    const { strike, callKey, putKey } = result;
+    const ltpResult = await getLtp([callKey, putKey].join(","), strike); 
+    console.log(ltpResult.strike+'|'+ltpResult.callLtp+'|'+ltpResult.putLtp);
+    if (!ltpResult) return;
+
+    saveToHistory(ltpResult);
+    await detectTrendMove(strike);
 }
 
-function addLog(strike, entry, calldiff, putdiff) {
-  const timestamp = formatTimestamp();
-  const logEntry = {
-    timestamp,
-    strike,
-    callLtp: entry.callLtp,
-    putLtp: entry.putLtp,
-    callDiff: Number(calldiff.toFixed(2)),
-    putDiff: Number(putdiff.toFixed(2))
-  };
+// Set expiry date for trading
+async function setExpiry() {
+    console.log('Setting expiry date...');
+    const niftyKey = "NSE_INDEX|Nifty 50";
+    const sensexKey = "BSE_INDEX|SENSEX";
 
-  // Add new entry to list
-  logList.push(logEntry);
+    const sensexExpiryDate = await getOptionContract(sensexKey);
+    const niftyExpiryDate = await getOptionContract(niftyKey);
 
-  // Remove oldest if length exceeded max
-  if (logList.length > maxLogLength) {
-    logList.shift();
-  }
-  //console.log(logEntry);
+    if (sensexExpiryDate <= niftyExpiryDate) {
+        instrumentKey = sensexKey;
+        expiryDate = sensexExpiryDate;
+        qty = "20";
+    } else {
+        instrumentKey = niftyKey;
+        expiryDate = niftyExpiryDate;
+        qty = "75";
+    }
+
+    return { instrumentKey, expiryDate, qty };
 }
 
+// Get option contract expiry
+async function getOptionContract(instrumentKey) {
+    const url = `https://api.upstox.com/v2/option/contract?instrument_key=${instrumentKey}`;
+    const headers = { 'Accept': 'application/json', 'Authorization': `Bearer ${await getToken()}` };
+    try {
+        const response = await axios.get(url, { headers });
+        const expiryDates = (response.data.data || []).map(item => item.expiry).filter(date => date);
+        if (!expiryDates.length) return null;
+        expiryDates.sort();
+        return expiryDates[0];
+    } catch (error) {
+        console.error("Failed to get option contract:", error.message);
+        return null;
+    }
+}
 
-exports.tracker = tracker;
-exports.logList = logList;
-exports.orderMemory = orderMemory;
-exports.tokens = tokens;
-exports.instrumentKey = instrumentKey;
-exports.qty = qty;
-exports.expiryDate = expiryDate;
+module.exports = { tracker, orderMemory, tokens, instrumentKey, qty, expiryDate, setExpiry };

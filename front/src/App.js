@@ -20,12 +20,13 @@ import {
 import UserTable from "./Components/UserTable";
 import OrdersTable from "./Components/OrdersTable";
 import { AppContextProvider, AppContext } from "./Context/AppContext";
+import { setExpiry } from './Utils/apiCalling';
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Option } = Select;
 const { Text } = Typography;
 
-const redirect_url = "https://flyspring-feh2b5gqc4bchgh0.canadacentral-01.azurewebsites.net/getCode";
+const redirect_url = "https://localhost/getCode";
 
 const clientIds = [
   "64bcafc6-5965-46c3-9e9b-113e396b1ecb",
@@ -39,22 +40,12 @@ const clientIds = [
 const stateValues = ["1", "2", "3", "4", "5", "6"];
 
 function Dashboard() {
-  const [selectedIndex, setSelectedIndex] = useState("NSE_INDEX|Nifty 50");
-  const [expiryDate, setExpiryDate] = useState(null);
+
 
   const handleUpdateClick = async () => {
-    if (!expiryDate) {
-      message.error("Please select an expiry date before updating.");
-      return;
-    }
+  
     try {
-      const response = await fetch("/api/setExpiry", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ index: selectedIndex, expiry: expiryDate }),
-      });
+      const response = await setExpiry();
 
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}`);
@@ -73,21 +64,9 @@ function Dashboard() {
       {/* Top card with dropdown, datepicker, and update button */}
       <Card style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
         <Space align="center" size="middle" wrap>
-          <Select
-            value={selectedIndex}
-            onChange={setSelectedIndex}
-            style={{ minWidth: 180 }}
-            dropdownMatchSelectWidth={false}
-          >
-            <Option value="NSE_INDEX|Nifty 50">Nifty</Option>
-            <Option value="BSE_INDEX|SENSEX">Sensex</Option>
-          </Select>
-
-          <Text strong>Select Expiry</Text>
-          <DatePicker onChange={(_, dateString) => setExpiryDate(dateString)} style={{ width: 160 }} />
-
+        
           <Button type="primary" onClick={handleUpdateClick}>
-            Update
+            Update Expiry
           </Button>
         </Space>
       </Card>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Spin, Alert } from 'antd';
+import { fetchOrdersDetails } from '../Utils/apiCalling';
 
 function OrdersTable() {
   const [orders, setOrders] = useState([]);
@@ -7,21 +8,38 @@ function OrdersTable() {
   const [error, setError] = useState(null);
 
   // Fetch orders from API
-  useEffect(() => {
-    fetch('/placeorder/details')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch orders');
-        return res.json();
-      })
-      .then((data) => {
+  // useEffect(() => {
+  //   fetch('/placeorder/details')
+  //     .then((res) => {
+  //       if (!res.ok) throw new Error('Failed to fetch orders');
+  //       return res.json();
+  //     })
+  //     .then((data) => {
+  //       setOrders(data ? (Array.isArray(data) ? data : [data]) : []);
+  //       setLoading(false);
+  //     })
+  //     .catch((err) => {
+  //       setError(err.message);
+  //       setLoading(false);
+  //     });
+  // }, []);
+
+   useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        // This function now automatically uses the API_BASE_URL defined in apiCalling.js
+        const data = await fetchOrdersDetails(); 
         setOrders(data ? (Array.isArray(data) ? data : [data]) : []);
         setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         setError(err.message);
         setLoading(false);
-      });
+      }
+    };
+
+    loadOrders();
   }, []);
+
 
   // Define columns for Ant Design Table
 const columns = [

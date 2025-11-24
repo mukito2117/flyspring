@@ -4,8 +4,8 @@ const { Builder, By, Key, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');  // Import chrome options
 const speakeasy = require('speakeasy');
 
-//const redirectUri = 'http://localhost/getCode';
-const redirectUri = 'https://flyspring-feh2b5gqc4bchgh0.canadacentral-01.azurewebsites.net/getCode';
+const redirectUri = 'https://localhost/getCode';
+//const redirectUri = 'https://flyspring-feh2b5gqc4bchgh0.canadacentral-01.azurewebsites.net/getCode';
 const mobileNumber = '9773544834';
 const totpkey = '5IM3OQ4XMF2YK6ZD6T62TO36BBMYERWN';
 
@@ -29,16 +29,97 @@ const apiSecret = [
 
 const pinCode = '171285';
 
+
+const MongoDBClient = require('./MongoDBClient');
+const mongoClient = new MongoDBClient();
+
+
+
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function getTokenbyAuthCode(authcode, state)
 {
+const currentDate = new Date();
+  const datetimeoptions = {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric'
+  };
+  const istTime = currentDate.toLocaleString('en-GB', datetimeoptions);
+
+
+  try{
     const apikey = apikeys[state-1];
     const apiSecretKey = apiSecret[state-1];
     const data = await getUpstoxAccessToken(apikey, apiSecretKey, redirectUri, authcode);
-    return data.access_token;
+    const token = data.access_token;
+     
+
+    const newTokenValue = data.access_token;
+    const collectionName = 'upstoxTokens';
+    const clientInstance = new MongoDBClient();
+    let mongoresp = null;
+
+   
+        // Ensure connection is active
+        await MongoDBClient.connect(); 
+
+        // 1. Check if the collection has any documents
+        // We use an efficient count operation if possible, or fetch to check length
+        const allDocs = await clientInstance.getData(collectionName, {});
+
+        if (!allDocs || allDocs.length === 0) {
+            // --- Collection is EMPTY: Insert a new document ---
+          
+            // Define the default document structure
+            const initialDocument = {
+                "Token1": "", // Set these to appropriate defaults if needed
+                "Token2": "",
+                "Token3": "",
+                "Token4": "",
+                "Token5": "",
+                "Token6": "",
+                "UpdatedOn": istTime
+            };
+
+            // Overwrite the specific token field being processed right now
+            const tokenFieldName = `Token${state}`;
+            initialDocument[tokenFieldName] = newTokenValue;
+            
+            mongoresp = await clientInstance.insertData(collectionName, initialDocument);
+           
+
+        } else {
+            // --- Collection has data: Update the first document found ---
+
+            // Get the _id of the first document found
+            const firstDocumentId = allDocs[0]._id; 
+            const filter = { _id: firstDocumentId };
+
+            // Determine which token field to update dynamically
+            const tokenFieldName = `Token${state}`; 
+
+            // Define the update operation: set the new token AND the current timestamp
+            const updateDoc = {
+                $set: {
+                    [tokenFieldName]: newTokenValue,
+                    "UpdatedOn": istTime // Set current timestamp
+                }
+            };
+            
+            mongoresp = await clientInstance.updateData(collectionName, filter, updateDoc);
+   
+
+          }
+    return token;
+    }catch(err){console.log(err);}
+    return null;
 }
 /**
  * Calls Upstox token API to exchange authorization code for access token.
@@ -172,6 +253,42 @@ async function getToken() {
   console.log('All tokens:', tokens);
   return tokens;
 }
+
+
+const getCurrentDateTime = () => {
+    // Input format: "DD/MM/YYYY, HH:MM:SS"
+
+
+    const currentDate = new Date();
+  const datetimeoptions = {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric'
+  };
+  const dateTimeString = currentDate.toLocaleString('en-GB', datetimeoptions);
+
+    const [datePart, timePart] = dateTimeString.split(', ');
+    const [day, monthStr, year] = datePart.split('/');
+    const [hour, minute, second] = timePart.split(':');
+
+    // Note: JavaScript months are 0-indexed (0=January, 11=December),
+    // so we subtract 1 from the month part.
+    const dateObject = new Date(
+        parseInt(year, 10),
+        parseInt(monthStr, 10) - 1,
+        parseInt(day, 10),
+        parseInt(hour, 10),
+        parseInt(minute, 10),
+        parseInt(second, 10)
+    );
+    
+    return dateObject;
+};
+
 
 exports.getToken = getToken;
 exports.getTokenbyAuthCode = getTokenbyAuthCode;
