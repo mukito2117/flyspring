@@ -26,7 +26,7 @@ const { Header, Content, Footer, Sider } = Layout;
 const { Option } = Select;
 const { Text } = Typography;
 
-const redirect_url = "https://localhost/getCode";
+const redirect_url = "https://www.flyspring.in/api/getCode";
 
 const clientIds = [
   "64bcafc6-5965-46c3-9e9b-113e396b1ecb",

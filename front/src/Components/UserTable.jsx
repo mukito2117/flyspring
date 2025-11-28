@@ -5,9 +5,10 @@ function UserTable() {
   const { logData } = useContext(AppContext);
 
   useEffect(() => {
-    // This effect runs when logData changes
+    // Effect runs when logData changes
   }, [logData]);
-  if (!logData.length) {
+
+  if (!logData || !logData.length) {
     return <p>Loading data...</p>;
   }
 
@@ -28,10 +29,10 @@ function UserTable() {
           <tr key={index}>
             <td>{timestamp}</td>
             <td>{strike}</td>
-            <td>{callLtp.toFixed(2)}</td>
-            <td>{putLtp.toFixed(2)}</td>
-            <td>{callDiff.toFixed(2)}</td>
-            <td>{putDiff.toFixed(2)}</td>
+            <td>{callLtp?.toFixed(2)}</td>
+            <td>{putLtp?.toFixed(2)}</td>
+            <td>{callDiff?.toFixed(2)}</td>
+            <td>{putDiff?.toFixed(2)}</td>
           </tr>
         ))}
       </tbody>

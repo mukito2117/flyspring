@@ -4,7 +4,7 @@ const { Builder, By, Key, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');  // Import chrome options
 const speakeasy = require('speakeasy');
 
-const redirectUri = 'https://localhost/getCode';
+const redirectUri = 'https://www.flyspring.in/api/getCode';
 //const redirectUri = 'https://flyspring-feh2b5gqc4bchgh0.canadacentral-01.azurewebsites.net/getCode';
 const mobileNumber = '9773544834';
 const totpkey = '5IM3OQ4XMF2YK6ZD6T62TO36BBMYERWN';
@@ -30,7 +30,7 @@ const apiSecret = [
 const pinCode = '171285';
 
 
-const MongoDBClient = require('./Utils/MongoDBClient.js');
+const MongoDBClient = require('./MongoDBClientFile');
 const mongoClient = new MongoDBClient();
 
 
