@@ -47,6 +47,17 @@ export const getMongoToken = async (req, res) => {
   }
 };
 
+export const getOrders = async (req, res) => {
+  try {
+    const mongoClient = new MongoDBClient();
+    const mongoTokens = await mongoClient.getData('alerts');
+    res.json(mongoTokens);
+  } catch (err) {
+    console.error('Error in getOrders:', err);
+    res.status(500).json({ error: 'Failed to fetch tokens from MongoDB' });
+  }
+};
+
 export const getTokenController = async (req, res) => {
   try {
     const t = await getToken();

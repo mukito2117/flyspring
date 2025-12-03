@@ -220,7 +220,7 @@ function AppContent() {
 
   useEffect(() => {
     const fetchData = () => {
-      fetch("/api/loglist")
+      fetch("/api/getOrders")
         .then((res) => {
           if (!res.ok) throw new Error("Network response was not ok");
           return res.json();
@@ -230,7 +230,7 @@ function AppContent() {
     };
 
     fetchData();
-    const intervalId = setInterval(fetchData, 1000);
+    const intervalId = setInterval(fetchData, 10000);
     return () => clearInterval(intervalId);
   }, [setLogData]);
 

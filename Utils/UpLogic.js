@@ -79,7 +79,7 @@ async function placeOrderToUpstox(type, token, entryPrice, stoploss, trailingGap
 
     try {
         const response = await axios.post(ORDER_API_URL, payload, { headers });
-
+console.log("Upstox order response:", response);
         if (!response.data || response.data.status !== 'success') {
             const msg = `Order rejected (${type}). Status: ${response.data?.status}, Body: ${JSON.stringify(response.data)}`;
 
@@ -715,7 +715,7 @@ async function tracker() {
     }
 if(ltpResult==null){return;}
 if(ltpResult.strike==null){return;}
-    console.log(formatDate(Date.now()) + ' >> ' + ltpResult.strike + '|' + ltpResult.callLtp + '|' + ltpResult.putLtp);
+    console.log(formatDate(Date.now()) + ' >> '+callKey+'|'+putKey+' >> ' + ltpResult.strike + '|' + ltpResult.callLtp + '|' + ltpResult.putLtp);
 
     saveToHistory(ltpResult);
     await detectTrendMove(strike);

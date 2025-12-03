@@ -12,6 +12,7 @@ import {
   getPlaceOrderDetails,
   getCode,
   getMongoToken,
+  getOrders,
   getTokenController,
   setExpiryController,
   getDatetimeLog,
@@ -59,6 +60,8 @@ app.get('/api/placeorder/details', getPlaceOrderDetails);
 app.get('/api/getCode', getCode);
 
 app.get('/api/getMongotoken', getMongoToken);
+
+app.get('/api/getOrders', getOrders);
 
 app.get('/api/token', getTokenController);
 
