@@ -18,21 +18,23 @@ function UserTable() {
         <tr>
           <th>Timestamp</th>
           <th>Strike</th>
-          <th>First LTP</th>
-          <th>Last LTP</th>
-          <th>Diff</th>
           <th>Side</th>
+          <th>Type</th>
+          <th>Entry</th>
+          <th>StopLoss</th>
+           <th>LTP</th>
         </tr>
       </thead>
       <tbody>
-        {logData.map(({ timestamp, strike, firstLTP, lastLTP, difference, side }, index) => (
+        {logData.map(({ timestamp, strike, side, type, entryPrice, stopLoss,ltp }, index) => (
           <tr key={index}>
             <td>{timestamp}</td>
-            <td>{strike}</td>
-            <td>{firstLTP?.toFixed(2)}</td>
-            <td>{lastLTP?.toFixed(2)}</td>
-            <td>{difference?.toFixed(2)}</td>
+            <td>{strike?.toFixed(2)}</td>
             <td>{side}</td>
+            <td>{type}</td>
+            <td>{entryPrice?.toFixed(2)}</td>
+            <td>{stopLoss?.toFixed(2)}</td>
+            <td>{ltp?.toFixed(2)}</td>
           </tr>
         ))}
       </tbody>

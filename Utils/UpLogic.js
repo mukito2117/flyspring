@@ -57,7 +57,7 @@ const orderMemory = {
     put: null
 };
 
-async function placeOrderToUpstox(type, token, entryPrice, stoploss, trailingGap, qty) {
+async function placeOrderToUpstox_(type, token, entryPrice, stoploss, trailingGap, qty) {
     const payload = {
         type: 'MULTIPLE',
         quantity: qty,
@@ -138,6 +138,7 @@ console.log("Upstox order response:", response);
     }
 }
 
+
 // Place order
 async function placeOrderToUpstox_old(type, token, entryPrice, stoploss, trailingGap, qty) {
     const payload = {
@@ -166,6 +167,82 @@ async function placeOrderToUpstox_old(type, token, entryPrice, stoploss, trailin
         return null;
     }
 }
+
+async function placeOrderToUpstox(type, token, entryPrice, stoploss, trailingGap, qty) {
+    const payload = {
+        type: 'MULTIPLE',
+        quantity: qty,
+        product: 'I',
+        instrument_token: token,
+        transaction_type: 'BUY',
+        rules: [
+            { strategy: 'ENTRY',   trigger_type: 'ABOVE',    trigger_price: entryPrice },
+            { strategy: 'TARGET',  trigger_type: 'IMMEDIATE', trigger_price: entryPrice * 25 },
+            { strategy: 'STOPLOSS', trigger_type: 'IMMEDIATE', trigger_price: entryPrice - stoploss, trailing_gap: trailingGap }
+        ]
+    };
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${await getToken()}`
+    };
+
+    try {
+        const response = await axios.post(ORDER_API_URL, payload, { headers });
+        console.log("Upstox order response:", response);
+
+        if (!response.data || response.data.status !== 'success') {
+            const msg = `Order rejected (${type}). Status: ${response.data?.status}, Body: ${JSON.stringify(response.data)}`;
+            console.error(msg);
+
+            // Save failure alert in separate MongoDB collection 'orderFailures'
+            const mongo = new MongoDBClient();
+            await mongo.insertData('orderFailures', {
+                timestamp: new Date(),
+                type: 'ORDER_FAILURE',
+                entryPrice,
+                stopLoss: stoploss,
+                ltp: entryPrice,
+                strike: null,
+                side: type,
+                token,
+                exception: msg
+            });
+
+            throw new Error(msg);
+        }
+
+        return response.data;
+
+    } catch (e) {
+        const errMsg = e.response
+            ? `Upstox order API error (${type}) - HTTP ${e.response.status}: ${JSON.stringify(e.response.data)}`
+            : `Upstox order API error (${type}) - ${e.message}`;
+
+        console.error(errMsg);
+
+        try {
+            const mongo = new MongoDBClient();
+            await mongo.insertData('orderFailures', {
+                timestamp: new Date(),
+                type: 'ORDER_FAILURE',
+                entryPrice,
+                stopLoss: stoploss,
+                ltp: entryPrice,
+                strike: null,
+                side: type,
+                token,
+                exception: errMsg
+            });
+        } catch (mongoErr) {
+            console.error('Failed to insert order failure alert into MongoDB:', mongoErr.message);
+        }
+
+        return null;
+    }
+}
+
 
 // Save history of LTP/OI/IV/Volume
 function saveToHistory(data) {
@@ -259,7 +336,7 @@ const MongoDBClient = require("./MongoDBClientFile");  // <-- your MongoDB clien
 const activePositions = {};
 
 // Detect trend and place orders using levels[]
-async function detectTrendMove(strike) {
+async function detectTrendMove_(strike) {
     const history = strikeHistory[strike];
     if (!history || history.length < 3) return;
 
@@ -308,15 +385,15 @@ async function detectTrendMove(strike) {
             // 1) Check for STOP LOSS HIT (EXIT)
             if (currentLtp <= pos.stopLoss) {
                 try {
-                    // Exit order: for simplicity, just market exit at currentLtp
-                    const exitResult = await placeOrderToUpstox(
-                        pos.side === "CALL" ? "CALL_EXIT" : "PUT_EXIT",
-                        pos.token,
-                        currentLtp,
-                        null,        // exit SL (not needed)
-                        null,        // exit trailing (not needed)
-                        pos.qty
-                    );
+                    // // Exit order: for simplicity, just market exit at currentLtp
+                    // const exitResult = await placeOrderToUpstox(
+                    //     pos.side === "CALL" ? "CALL_EXIT" : "PUT_EXIT",
+                    //     pos.token,
+                    //     currentLtp,
+                    //     null,        // exit SL (not needed)
+                    //     null,        // exit trailing (not needed)
+                    //     pos.qty
+                    // );
 
                     const mongo = getMongo();
                     await mongo.insertData("alerts", {
@@ -329,7 +406,7 @@ async function detectTrendMove(strike) {
                         entryPrice: pos.entryPrice,
                         level: pos.level,
                         timestamp: new Date(),
-                        orderResult: exitResult
+                        orderResult: null
                     });
 
                     console.log(`🚪 ${pos.side} Exit triggered on ${strike} @ LTP ${currentLtp} (SL hit: ${pos.stopLoss})`);
@@ -687,6 +764,255 @@ async function detectTrendMove_old(strike) {
 
     } catch (err) {
         console.error("❌ Error placing order:", err.message);
+    }
+}
+
+
+
+async function detectTrendMove(strike) {
+    const history = strikeHistory[strike];
+    if (!history || history.length < 3) return;
+
+    const first = history[0];
+    const last  = history[history.length - 1];
+
+    // --------------------------
+    // FIND LEVEL BASED ON LTP
+    // --------------------------
+    function getLevel(ltp) {
+        return levels.find(l => ltp >= l.threshold)
+            || levels[levels.length - 1];
+    }
+
+    const callLevel = getLevel(last.callLtp);
+    const putLevel  = getLevel(last.putLtp);
+
+    // --------------------------
+    // CALCULATE LTP DIFFERENCE
+    // --------------------------
+    const callLtpDiff = last.callLtp - first.callLtp;
+    const putLtpDiff  = last.putLtp - first.putLtp;
+
+    // OI / Volume / IV
+    const callOIChange = ((last.callOI - first.callOI) / first.callOI) * 100;
+    const putOIChange  = ((last.putOI - first.putOI) / first.putOI) * 100;
+
+    const callVolRatio = last.callVolume / first.callVolume;
+    const putVolRatio  = last.putVolume / first.putVolume;
+
+    const callIVChange = last.callIV - first.callIV;
+    const putIVChange  = last.putIV - first.putIV;
+
+    // Helper to create Mongo client
+    const getMongo = () => new MongoDBClient();
+
+    try {
+        // ==========================================================
+        // IF POSITION ALREADY ACTIVE -> MANAGE (SL / TRAIL / EXIT)
+        // ==========================================================
+        const pos = activePositions[strike];
+        if (pos) {
+            // Track current LTP depending on side
+            const currentLtp = pos.side === "CALL" ? last.callLtp : last.putLtp;
+
+            // 1) Check for STOP LOSS HIT (EXIT)
+            if (currentLtp <= pos.stopLoss) {
+                try {
+                
+                    const mongo = getMongo();
+                    await mongo.insertData("alerts", {
+                        timestamp: new Date(),
+                        type: "Exit",
+                        entryPrice: pos.entryPrice,
+                        stopLoss: pos.stopLoss,
+                        ltp: currentLtp,
+                        strike,
+                        side: pos.side,
+                        token: pos.token
+                    });
+
+                    console.log(`🚪 ${pos.side} Exit triggered on ${strike} @ LTP ${currentLtp} (SL hit: ${pos.stopLoss})`);
+
+                    // Remove active position
+                    delete activePositions[strike];
+
+                    // reset history after exit
+                    strikeHistory[strike] = [];
+                } catch (err) {
+                    console.error("❌ Error exiting position:", err.message);
+                }
+
+                // after handling exit, return; no new buy signal this tick
+                return;
+            }
+
+            // 2) Check for TRAILING STOP UPDATE
+            const favorableMove = currentLtp - pos.entryPrice;
+            if (favorableMove >= pos.trailingGap) {
+                const newStopLoss = currentLtp - pos.trailingGap;
+
+                if (newStopLoss > pos.stopLoss) {
+                    const oldSL = pos.stopLoss;
+                    pos.stopLoss = newStopLoss;
+                    pos.updatedAt = new Date();
+
+                    const mongo = getMongo();
+                    await mongo.insertData("alerts", {
+                        timestamp: new Date(),
+                        type: "StopLossTrail",
+                        entryPrice: pos.entryPrice,
+                        stopLoss: newStopLoss,
+                        ltp: currentLtp,
+                        strike,
+                        side: pos.side,
+                        token: pos.token
+                    });
+
+                    console.log(`⬆️ Trailing SL updated on ${strike} (${pos.side}): ${oldSL} -> ${newStopLoss}`);
+                }
+            }
+
+            // If position is active, do NOT create new buy alert.
+            return;
+        }
+
+        // ==========================================================
+        // NO ACTIVE POSITION -> CHECK FOR NEW BUY SIGNALS
+        // ==========================================================
+
+        // --------------------------
+        // CALL SIGNAL CHECK
+        // --------------------------
+        if (
+            callLtpDiff >= callLevel.minChange ||
+            callOIChange > OIChange ||
+            callVolRatio > VolChange ||
+            callIVChange > IVChange
+        ) {
+            // --------------------------
+            // PLACE CALL ORDER
+            // --------------------------
+            const callStopLoss = last.callLtp - callLevel.stoploss;
+            const callTrailing = callLevel.gap;
+
+            const callResult = await placeOrderToUpstox(
+                "CALL",
+                last.callToken,
+                last.callLtp,
+                callStopLoss,
+                callTrailing,
+                qty
+            );
+
+            const mongo = getMongo();
+            await mongo.insertData("alerts", {
+                timestamp: new Date(),
+                type: "Entry",
+                entryPrice: last.callLtp,
+                stopLoss: callStopLoss,
+                ltp: last.callLtp,
+                strike,
+                side: "CALL",
+                token: last.callToken
+            });
+
+            console.log(`🔥 CALL Order Triggered on ${strike}`);
+            console.log({
+                firstLTP: first.callLtp,
+                lastLTP: last.callLtp,
+                diff: callLtpDiff,
+                levelUsed: callLevel
+            });
+            console.log("Order:", callResult);
+
+            // --------------------------
+            // SAVE ACTIVE POSITION (ONLY SPECIFIED KEYS)
+            // --------------------------
+            activePositions[strike] = {
+                timestamp: new Date(),
+                type: "Entry",
+                entryPrice: last.callLtp,
+                stopLoss: callStopLoss,
+                ltp: last.callLtp,
+                strike,
+                side: "CALL",
+                token: last.callToken
+            };
+
+            // RESET HISTORY for this strike (start fresh after entry)
+            strikeHistory[strike] = [];
+
+            // after CALL entry, return; skip PUT for this strike
+            return;
+        }
+
+        // --------------------------
+        // PUT SIGNAL CHECK
+        // --------------------------
+        if (
+            putLtpDiff >= putLevel.minChange ||
+            putOIChange > OIChange ||
+            putVolRatio > VolChange ||
+            putIVChange > IVChange
+        ) {
+            // --------------------------
+            // PLACE PUT ORDER
+            // --------------------------
+            const putStopLoss = last.putLtp - putLevel.stoploss;
+            const putTrailing = putLevel.gap;
+
+            const putResult = await placeOrderToUpstox(
+                "PUT",
+                last.putToken,
+                last.putLtp,
+                putStopLoss,
+                putTrailing,
+                qty
+            );
+
+            const mongo = getMongo();
+            await mongo.insertData("alerts", {
+                timestamp: new Date(),
+                type: "Entry",
+                entryPrice: last.putLtp,
+                stopLoss: putStopLoss,
+                ltp: last.putLtp,
+                strike,
+                side: "PUT",
+                token: last.putToken
+            });
+
+            console.log(`🔥 PUT Order Triggered on ${strike}`);
+            console.log({
+                firstLTP: first.putLtp,
+                lastLTP: last.putLtp,
+                diff: putLtpDiff,
+                levelUsed: putLevel
+            });
+            console.log("Order:", putResult);
+
+            // --------------------------
+            // SAVE ACTIVE POSITION (ONLY SPECIFIED KEYS)
+            // --------------------------
+            activePositions[strike] = {
+                timestamp: new Date(),
+                type: "Entry",
+                entryPrice: last.putLtp,
+                stopLoss: putStopLoss,
+                ltp: last.putLtp,
+                strike,
+                side: "PUT",
+                token: last.putToken
+            };
+
+            // RESET HISTORY after entry
+            strikeHistory[strike] = [];
+
+            return;
+        }
+
+    } catch (err) {
+        console.error("❌ Error in detectTrendMove / placing or managing order:", err.message);
     }
 }
 
