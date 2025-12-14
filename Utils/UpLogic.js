@@ -168,7 +168,78 @@ async function placeOrderToUpstox_old(type, token, entryPrice, stoploss, trailin
     }
 }
 
+
+
+
+const placeGttOrder = async (instrumentToken, entryTriggerPrice, quantity) => {
+   const apiUrl = 'https://api.upstox.com/v3/order/gtt/place';
+
+  if(entryTriggerPrice<2){return null;}
+   let stoploss =entryTriggerPrice-1;
+
+   if(entryTriggerPrice>10 && entryTriggerPrice<=50){
+    stoploss = entryTriggerPrice - 2;
+   }else if(entryTriggerPrice>50 && entryTriggerPrice<=100){
+    stoploss = entryTriggerPrice - 3;
+   }else if(entryTriggerPrice>100 && entryTriggerPrice<=500){
+    stoploss = entryTriggerPrice - 5;
+   }else if(entryTriggerPrice>500){
+    stoploss = entryTriggerPrice - 10;
+   }
+
+   let trailing_gap = 1;
+
+  
+    const requestBody = {
+        "type": "MULTIPLE", 
+        "quantity": quantity,
+        "product": "I", 
+        "rules": [
+            {
+                "strategy": "ENTRY",
+                "trigger_type": "ABOVE", 
+                "trigger_price": entryTriggerPrice
+            },
+            {
+              "strategy": "TARGET",
+              "trigger_type": "IMMEDIATE",
+              "trigger_price": entryTriggerPrice*25
+            },
+            {
+              "strategy": "STOPLOSS",
+              "trigger_type": "IMMEDIATE",
+              "trigger_price": stoploss,
+              "trailing_gap": trailing_gap
+            }
+        ],
+        "instrument_token": instrumentToken,
+        "transaction_type": 'BUY'
+    };
+
+    try {
+        const response = await axios.post(apiUrl, requestBody, {
+            headers: {
+                'accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${await gettoken()}`
+            }
+        });
+
+        console.log(`GTT order placed successfully for ${instrumentToken}:`, response.data);
+        return response.data; 
+
+    } catch (error) {
+        console.error(`Error placing GTT order for ${instrumentToken}:`, error.message);
+        if (error.response) {
+            console.error('Error response data:', error.response.data);
+        }
+        return null;
+    }
+};
+
+
 async function placeOrderToUpstox(type, token, entryPrice, stoploss, trailingGap, qty) {
+    return placeGttOrder(token, entryPrice, qty);
     const payload = {
         type: 'MULTIPLE',
         quantity: qty,
